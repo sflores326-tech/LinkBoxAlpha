@@ -4,8 +4,7 @@
   <meta charset="UTF-8">
   <title>Alpha Parts List</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <!-- Tailwind via CDN -->
+  <!-- TailwindCSS via CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-50 text-gray-800">
@@ -13,22 +12,33 @@
   <div class="container mx-auto p-6">
     <h1 class="text-3xl font-bold text-center mb-6">Alpha Parts List</h1>
 
-    <!-- Unlock Edit Mode -->
-    <div id="edit-controls" class="mb-6 flex gap-2">
-      <input id="passwordInput" type="password" placeholder="Enter password"
-             class="border p-2 rounded flex-1">
-      <button onclick="enableEdit()"
-              class="px-4 py-2 bg-blue-500 text-white rounded">
-        Unlock Edit
-      </button>
-    </div>
-
     <!-- Tabs -->
     <div id="tabs" class="flex flex-wrap gap-2 mb-6"></div>
 
     <!-- Items -->
     <div id="items" class="space-y-3"></div>
+  </div>
 
+  <!-- Small hidden unlock button -->
+  <button id="unlockBtn"
+          class="fixed bottom-3 right-3 text-xs text-gray-400 hover:text-blue-500">
+    Edit
+  </button>
+
+  <!-- Hidden password modal -->
+  <div id="passwordModal"
+       class="hidden fixed inset-0 bg-black/50 flex items-center justify-center">
+    <div class="bg-white p-4 rounded shadow-lg w-80">
+      <h2 class="text-lg font-bold mb-2">Enter Edit Password</h2>
+      <input id="passwordInput" type="password"
+             class="border p-2 rounded w-full mb-3" placeholder="Password">
+      <div class="flex justify-end gap-2">
+        <button onclick="closePasswordModal()"
+                class="px-3 py-1 bg-gray-300 rounded">Cancel</button>
+        <button onclick="enableEdit()"
+                class="px-3 py-1 bg-blue-500 text-white rounded">Unlock</button>
+      </div>
+    </div>
   </div>
 
   <script type="module" src="firebase.js"></script>
