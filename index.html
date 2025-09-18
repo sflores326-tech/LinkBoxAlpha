@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Parts Hub</title>
+<style>
+body {
+font-family: Arial, sans-serif;
+background: #f4f4f4;
+padding: 40px;
+}
+
+.tab-box {
+width: 100%;
+max-width: 800px;
+margin: auto;
+background: white;
+border-radius: 8px;
+box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.tabs {
+display: flex;
+border-bottom: 1px solid #ccc;
+}
+
+.tab-button {
+flex: 1;
+padding: 15px;
+background: #eee;
+border: none;
+cursor: pointer;
+font-weight: bold;
+transition: background 0.3s;
+}
+
+.tab-button.active {
+background: #ffffff;
+border-bottom: 3px solid #007BFF;
+}
+
+.tab-content {
+display: none;
+padding: 20px;
+}
+
+.tab-content.active {
+display: block;
+}
+
+a {
+color: #007BFF;
+text-decoration: none;
+}
+
+a:hover {
+text-decoration: underline;
+}
+</style>
+</head>
+<body>
+
+<div class="tab-box">
+<div class="tabs">
+<button class="tab-button active" onclick="openTab(0)">Electronics</button>
+<button class="tab-button" onclick="openTab(1)">3D Printer</button>
+<button class="tab-button" onclick="openTab(2)">Misc</button>
+</div>
+
+<div class="tab-content active">
+<h3>Electronics Parts List</h3>
+<ul>
+<li><a href="https://example.com/resistor-pack">Resistor Pack (220Ω)</a></li>
+<li><a href="https://example.com/arduino-uno">Arduino Uno</a></li>
+<li><a href="https://example.com/breadboard">Breadboard</a></li>
+</ul>
+</div>
+
+<div class="tab-content">
+<h3>3D Printer Parts</h3>
+<ul>
+<li><a href="https://example.com/nozzle-kit">Nozzle Kit</a></li>
+<li><a href="https://example.com/pla-filament">PLA Filament - Black</a></li>
+<li><a href="https://example.com/hotend">Hotend Assembly</a></li>
+</ul>
+</div>
+
+<div class="tab-content">
+<h3>Miscellaneous Links</h3>
+<p>Stuff you might need:</p>
+<ul>
+<li><a href="https://example.com/screws">M3 Screws</a></li>
+<li><a href="https://example.com/zip-ties">Zip Ties</a></li>
+</ul>
+</div>
+</div>
+
+<script>
+function openTab(index) {
+const contents = document.querySelectorAll('.tab-content');
+const buttons = document.querySelectorAll('.tab-button');
+
+contents.forEach((c, i) => {
+c.classList.toggle('active', i === index);
+buttons[i].classList.toggle('active', i === index);
+});
+}
+</script>
+
+</body>
+</html>
