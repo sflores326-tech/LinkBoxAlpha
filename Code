@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Parts Manager</title>
+<style>
+body {
+font-family: Arial, sans-serif;
+background: #f4f4f4;
+padding: 30px;
+}
+
+.tab-box {
+max-width: 900px;
+margin: auto;
+background: white;
+border-radius: 8px;
+box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.tabs {
+display: flex;
+flex-wrap: wrap;
+border-bottom: 1px solid #ccc;
+padding: 10px;
+}
+
+.tab-button {
+background: #eee;
+border: none;
+padding: 10px 15px;
+margin: 5px 5px 0 0;
+cursor: pointer;
+font-weight: bold;
+border-radius: 5px 5px 0 0;
+}
+
+.tab-button.active {
+background: white;
+border-bottom: 2px solid #007BFF;
+}
+
+.tab-content {
+display: none;
+padding: 20px;
+}
+
+.tab-content.active {
+display: block;
+}
+
+input[type="text"], input[type="url"] {
+padding: 8px;
+width: 35%;
+margin-right: 10px;
+}
+
+button {
+padding: 8px 12px;
+cursor: pointer;
+}
+
+ul {
+list-style-type: none;
+padding-left: 0;
+}
+
+li {
+margin-bottom: 5px;
+}
+
+li a {
+color: #007BFF;
+text-decoration: none;
+}
+
+li a:hover {
+text-decoration: underline;
+}
+
+.delete-btn {
+color: red;
+margin-left: 10px;
+cursor: pointer;
+}
+
+.tab-header {
+display: flex;
+justify-content: space-between;
+align-items: center;
+}
+
+.rename-input {
+width: auto;
+margin-right: 10px;
+}
+
+.add-tab-form {
+margin: 20px;
+text-align: center;
+}
+
+.rename-btn {
+font-size: 12px;
+margin-left: 10px;
+}
+</style>
+</head>
+<body>
+
+<div class="tab-box">
+<div class="tabs" id="tabs"></div>
+
+<div id="tab-contents"></div>
+
+<div class="add-tab-form">
+<input type="text" id="new-tab-name" placeholder="New tab name" />
+<button onclick="addNewTab()">➕ Add Tab</button>
+</div>
+</div>
+
+<script>
+let activeTab = null;
+
+function init() {
+const savedTabs = JSON.parse(localStorage.getItem("tabs")) || [];
+if (savedTabs.length === 0) {
+addNewTab("Electronics");
+addNewTab("3D Printer");
+addNewTab("Misc");
+} else {
+savedTabs.forEach(name => addNewTab(name, false));
+switchTab(savedTabs[0]);
+}
+}
+
+function saveTabs() {
+const tabs = Array.from(document.querySelectorAll('.tab-button')).map(btn => btn.dataset.tab);
+localStorage.setItem("tabs", JSON.stringify(tabs));
+}
+
+function addNewTab(name = null, switchTo = true) {
+const newName = name || document.getElementById("new-tab-name").value.trim();
+if (!newName || document.getElementById(`tab-btn-${newName}`)) return;
+
+// Create tab button
+const tabBtn = document.createElement("button");
+tabBtn.className = "tab-button";
+tabBtn.innerHTML = `<span class="tab-title">${newName}</span> <button class="rename-btn" onclick="renameTabPrompt('${newName}', event)">✏️</button>`;
+tabBtn.dataset.tab = newName;
+tabBtn.id = `tab-btn-${newName}`;
+tabBtn.onclick = () => switchTab(newName);
+document.getElementById("tabs").appendChild(tabBtn);
+
+// Create content area
+const content = document.createElement("div");
+content.className = "tab-content";
+content.id = `tab-content-${newName}`;
+content.innerHTML = `
+<h3>${newName} Items</h3>
+<form onsubmit="addItem(event, '${newName}')">
+<input type="text" id="${newName}-name" placeholder="Item name" required />
+<input type="url" id="${newName}-link" placeholder="https://example.com" required />
+<button type="submit">Add</button>
+</form>
+<ul id="${newName}-list"></ul>
+`;
+document.getElementById("tab-contents").appendChild(content);
+
+saveTabs();
+if (switchTo) switchTab(newName);
+loadItems(newName);
+document.getElementById("new-tab-name").value = "";
+}
+
+function switchTab(tabName) {
+activeTab = tabName;
+document.querySelectorAll(".tab-button").forEach(btn => {
+btn.classList.toggle("active", btn.dataset.tab === tabName);
+});
+document.querySelectorAll(".tab-content").forEach(content => {
+content.classList.toggle("active", content.id === `tab-content-${tabName}`);
+});
+}
+
+function renameTabPrompt(oldName, event) {
+event.stopPropagation();
+const newName = prompt("Enter new name for this tab:", oldName);
+if (!newName || document.getElementById(`tab-btn-${newName}`)) return;
+
+// Update tab list
+const tabs = JSON.parse(localStorage.getItem("tabs")) || [];
+const index = tabs.indexOf(oldName);
+if (index !== -1) {
+tabs[index] = newName;
+localStorage.setItem("tabs", JSON.stringify(tabs));
+}
+
+// Update tab button
+const tabBtn = document.getElementById(`tab-btn-${oldName}`);
+tabBtn.id = `tab-btn-${newName}`;
+tabBtn.dataset.tab = newName;
+tabBtn.innerHTML = `<span class="tab-title">${newName}</span> <button class="rename-btn" onclick="renameTabPrompt('${newName}', event)">✏️</button>`;
+tabBtn.onclick = () => switchTab(newName);
+
+// Update content area
+const content = document.getElementById(`tab-content-${oldName}`);
+content.id = `tab-content-${newName}`;
+content.querySelector("form").setAttribute("onsubmit", `addItem(event, '${newName}')`);
+content.querySelector("h3").textContent = `${newName} Items`;
+content.querySelector("form input[type=text]").id = `${newName}-name`;
+content.querySelector("form input[type=url]").id = `${newName}-link`;
+content.querySelector("ul").id = `${newName}-list`;
+
+// Rename storage key
+const items = localStorage.getItem(oldName);
+if (items) {
+localStorage.setItem(newName, items);
+localStorage.removeItem(oldName);
+}
+
+switchTab(newName);
+}
+
+function addItem(event, tab) {
+event.preventDefault();
+const nameInput = document.getElementById(`${tab}-name`);
+const linkInput = document.getElementById(`${tab}-link`);
+const name = nameInput.value.trim();
+const link = linkInput.value.trim();
+if (!name || !link) return;
+
+const items = JSON.parse(localStorage.getItem(tab)) || [];
+items.push({ name, link });
+localStorage.setItem(tab, JSON.stringify(items));
+nameInput.value = '';
+linkInput.value = '';
+loadItems(tab);
+}
+
+function loadItems(tab) {
+const list = document.getElementById(`${tab}-list`);
+const items = JSON.parse(localStorage.getItem(tab)) || [];
+list.innerHTML = '';
+items.forEach((item, index) => {
+const li = document.createElement("li");
+li.innerHTML = `<a href="${item.link}" target="_blank">${item.name}</a>
+<span class="delete-btn" onclick="deleteItem('${tab}', ${index})">🗑</span>`;
+list.appendChild(li);
+});
+}
+
+function deleteItem(tab, index) {
+let items = JSON.parse(localStorage.getItem(tab)) || [];
+items.splice(index, 1);
+localStorage.setItem(tab
