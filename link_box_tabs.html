@@ -1,0 +1,102 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Parts List Link Box</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+    }
+    .tab-container {
+      width: 100%;
+      max-width: 600px;
+      margin: 20px auto;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+    .tabs {
+      display: flex;
+      cursor: pointer;
+      background-color: #f1f1f1;
+    }
+    .tab {
+      flex: 1;
+      padding: 10px;
+      text-align: center;
+      border-right: 1px solid #ccc;
+    }
+    .tab:last-child {
+      border-right: none;
+    }
+    .tab.active {
+      background-color: #fff;
+      font-weight: bold;
+    }
+    .tab-content {
+      display: none;
+      padding: 15px;
+      background-color: #fff;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    ul {
+      padding-left: 20px;
+    }
+    a {
+      color: #0077cc;
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+<div class="tab-container">
+  <div class="tabs">
+    <div class="tab active" onclick="showTab(0)">Electrical</div>
+    <div class="tab" onclick="showTab(1)">Mechanical</div>
+    <div class="tab" onclick="showTab(2)">Tools</div>
+  </div>
+
+  <div class="tab-content active">
+    <h3>Electrical Parts</h3>
+    <ul>
+      <li><a href="https://example.com/part1" target="_blank">Wire - 12 AWG</a></li>
+      <li><a href="https://example.com/part2" target="_blank">Circuit Breaker - 20A</a></li>
+    </ul>
+  </div>
+
+  <div class="tab-content">
+    <h3>Mechanical Parts</h3>
+    <ul>
+      <li><a href="https://example.com/part3" target="_blank">Mounting Bracket</a></li>
+      <li><a href="https://example.com/part4" target="_blank">Screws - M4</a></li>
+    </ul>
+  </div>
+
+  <div class="tab-content">
+    <h3>Tools</h3>
+    <ul>
+      <li><a href="https://example.com/part5" target="_blank">Torque Wrench</a></li>
+      <li><a href="https://example.com/part6" target="_blank">Multimeter</a></li>
+    </ul>
+  </div>
+</div>
+
+<script>
+  function showTab(index) {
+    const tabs = document.querySelectorAll('.tab');
+    const contents = document.querySelectorAll('.tab-content');
+    tabs.forEach((tab, i) => {
+      tab.classList.toggle('active', i === index);
+      contents[i].classList.toggle('active', i === index);
+    });
+  }
+</script>
+
+</body>
+</html>
