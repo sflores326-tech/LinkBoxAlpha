@@ -64,7 +64,7 @@ text-decoration: underline;
 <div class="tab-box">
 <div class="tabs">
 <button class="tab-button active" onclick="openTab(0)">Electronics</button>
-<button class="tab-button" onclick="openTab(1)">3D Printer</button>
+<button class="tab-button" onclick="openTab(1)">Non_Electronic</button>
 <button class="tab-button" onclick="openTab(2)">Misc</button>
 </div>
 
