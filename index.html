@@ -32,11 +32,10 @@ background: #eee;
 border: none;
 cursor: pointer;
 font-weight: bold;
-transition: background 0.3s;
 }
 
 .tab-button.active {
-background: #ffffff;
+background: #fff;
 border-bottom: 3px solid #007BFF;
 }
 
@@ -49,12 +48,32 @@ padding: 20px;
 display: block;
 }
 
-a {
+form {
+margin-bottom: 20px;
+}
+
+input[type="text"], input[type="url"] {
+padding: 8px;
+width: 60%;
+margin-right: 10px;
+}
+
+button {
+padding: 8px 12px;
+cursor: pointer;
+}
+
+ul {
+list-style-type: none;
+padding-left: 0;
+}
+
+li a {
 color: #007BFF;
 text-decoration: none;
 }
 
-a:hover {
+li a:hover {
 text-decoration: underline;
 }
 </style>
@@ -68,35 +87,46 @@ text-decoration: underline;
 <button class="tab-button" onclick="openTab(2)">Misc</button>
 </div>
 
-<div class="tab-content active">
-<h3>Electronics Parts List</h3>
-<ul>
-<li><a href="https://example.com/resistor-pack">Resistor Pack (220Ω)</a></li>
-<li><a href="https://example.com/arduino-uno">Arduino Uno</a></li>
-<li><a href="https://example.com/breadboard">Breadboard</a></li>
-</ul>
+<div class="tab-content active" data-tab="electronics">
+<h3>Electronics Parts</h3>
+<form onsubmit="addItem(event, 'electronics')">
+<input type="text" placeholder="Part Name" id="electronics-name" required>
+<input type="url" placeholder="Link" id="electronics-link" required>
+<button type="submit">Add</button>
+</form>
+<ul id="electronics-list"></ul>
 </div>
 
-<div class="tab-content">
+<div class="tab-content" data-tab="printer">
 <h3>3D Printer Parts</h3>
-<ul>
-<li><a href="https://example.com/nozzle-kit">Nozzle Kit</a></li>
-<li><a href="https://example.com/pla-filament">PLA Filament - Black</a></li>
-<li><a href="https://example.com/hotend">Hotend Assembly</a></li>
-</ul>
+<form onsubmit="addItem(event, 'printer')">
+<input type="text" placeholder="Part Name" id="printer-name" required>
+<input type="url" placeholder="Link" id="printer-link" required>
+<button type="submit">Add</button>
+</form>
+<ul id="printer-list"></ul>
 </div>
 
-<div class="tab-content">
-<h3>Miscellaneous Links</h3>
-<p>Stuff you might need:</p>
-<ul>
-<li><a href="https://example.com/screws">M3 Screws</a></li>
-<li><a href="https://example.com/zip-ties">Zip Ties</a></li>
-</ul>
+<div class="tab-content" data-tab="misc">
+<h3>Miscellaneous</h3>
+<form onsubmit="addItem(event, 'misc')">
+<input type="text" placeholder="Item Name" id="misc-name" required>
+<input type="url" placeholder="Link" id="misc-link" required>
+<button type="submit">Add</button>
+</form>
+<ul id="misc-list"></ul>
 </div>
 </div>
 
 <script>
+// Load items on page load
+window.onload = function() {
+loadItems('electronics');
+loadItems('printer');
+loadItems('misc');
+};
+
+// Tab switching
 function openTab(index) {
 const contents = document.querySelectorAll('.tab-content');
 const buttons = document.querySelectorAll('.tab-button');
@@ -105,6 +135,36 @@ contents.forEach((c, i) => {
 c.classList.toggle('active', i === index);
 buttons[i].classList.toggle('active', i === index);
 });
+}
+
+// Add item to list and save to localStorage
+function addItem(event, category) {
+event.preventDefault();
+
+const name = document.getElementById(`${category}-name`).value.trim();
+const link = document.getElementById(`${category}-link`).value.trim();
+
+if (!name || !link) return;
+
+const item = { name, link };
+const stored = JSON.parse(localStorage.getItem(category)) || [];
+stored.push(item);
+localStorage.setItem(category, JSON.stringify(stored));
+
+document.getElementById(`${category}-name`).value = '';
+document.getElementById(`${category}-link`).value = '';
+
+loadItems(category);
+}
+
+// Load items from localStorage
+function loadItems(category) {
+const list = document.getElementById(`${category}-list`);
+const items = JSON.parse(localStorage.getItem(category)) || [];
+
+list.innerHTML = items.map(item =>
+`<li><a href="${item.link}" target="_blank">${item.name}</a></li>`
+).join('');
 }
 </script>
 
