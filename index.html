@@ -39,8 +39,8 @@
   };
 
   firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
-  const docRef = db.collection("partsList").doc("sharedData");
+  const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
 
   let data = { tabs: [], parts: [] };
 
