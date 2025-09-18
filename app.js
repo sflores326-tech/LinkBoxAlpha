@@ -28,7 +28,7 @@ window.enableEdit = function() {
   if (pw === EDIT_PASSWORD) {
     editMode = true;
     passwordModal.classList.add("hidden");
-    unlockBtn.remove(); // remove the unlock link once editing is active
+    unlockBtn.remove();
     renderTabs();
     renderItems();
     alert("✅ Edit Mode Enabled");
@@ -56,6 +56,18 @@ function renderTabs() {
     }`;
     btn.innerText = tab.name;
     btn.onclick = () => { activeTab = tab.id; renderTabs(); renderItems(); };
+
+    // ✏️ Allow renaming with double-click
+    if (editMode) {
+      btn.ondblclick = async () => {
+        const newName = prompt("Rename Tab:", tab.name);
+        if (newName && newName.trim() !== tab.name) {
+          const tabRef = doc(db, "tabs", tab.id);
+          await updateDoc(tabRef, { name: newName.trim(), editPassword: EDIT_PASSWORD });
+        }
+      };
+    }
+
     tabsDiv.appendChild(btn);
 
     if (editMode) {
@@ -92,12 +104,43 @@ function renderItems() {
     link.className = "text-blue-600";
     link.innerText = item.title;
 
+    // ✏️ Double-click title to rename
+    if (editMode) {
+      link.ondblclick = async (e) => {
+        e.preventDefault(); // don’t open link
+        const newTitle = prompt("Edit Item Title:", item.title);
+        if (newTitle && newTitle.trim() !== item.title) {
+          const tabRef = doc(db, "tabs", tab.id);
+          const newItems = [...tab.items];
+          newItems[idx].title = newTitle.trim();
+          await updateDoc(tabRef, { items: newItems, editPassword: EDIT_PASSWORD });
+        }
+      };
+    }
+
     row.appendChild(link);
 
     if (editMode) {
+      // ✏️ Double-click URL to edit
+      const urlBtn = document.createElement("button");
+      urlBtn.innerText = "🔗";
+      urlBtn.className = "ml-2 text-sm text-blue-500";
+      urlBtn.title = "Edit URL";
+      urlBtn.onclick = async () => {
+        const newUrl = prompt("Edit Item URL:", item.url);
+        if (newUrl && newUrl.trim() !== item.url) {
+          const tabRef = doc(db, "tabs", tab.id);
+          const newItems = [...tab.items];
+          newItems[idx].url = newUrl.trim();
+          await updateDoc(tabRef, { items: newItems, editPassword: EDIT_PASSWORD });
+        }
+      };
+      row.appendChild(urlBtn);
+
+      // ❌ Delete button
       const del = document.createElement("button");
       del.innerText = "✕";
-      del.className = "text-red-500 text-sm";
+      del.className = "ml-2 text-red-500 text-sm";
       del.onclick = () => deleteItem(tab.id, idx);
       row.appendChild(del);
     }
