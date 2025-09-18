@@ -10,17 +10,30 @@ let activeTab = null;
 
 const tabsDiv = document.getElementById("tabs");
 const itemsDiv = document.getElementById("items");
+const passwordModal = document.getElementById("passwordModal");
+const unlockBtn = document.getElementById("unlockBtn");
 
-// 🔑 Enable edit mode
+// 🔑 Show password modal
+unlockBtn.addEventListener("click", () => {
+  passwordModal.classList.remove("hidden");
+});
+
+window.closePasswordModal = function() {
+  passwordModal.classList.add("hidden");
+};
+
+// 🔑 Unlock edit mode
 window.enableEdit = function() {
   const pw = document.getElementById("passwordInput").value;
   if (pw === EDIT_PASSWORD) {
     editMode = true;
-    document.getElementById("edit-controls").innerHTML =
-      `<p class="text-green-600 font-bold">Edit Mode Enabled ✅</p>`;
+    passwordModal.classList.add("hidden");
+    unlockBtn.remove(); // remove the unlock link once editing is active
     renderTabs();
+    renderItems();
+    alert("✅ Edit Mode Enabled");
   } else {
-    alert("Wrong password!");
+    alert("❌ Wrong password");
   }
 };
 
