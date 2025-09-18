@@ -1,0 +1,153 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Firebase Synced Parts List</title>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; }
+    .tab-container { max-width: 700px; margin: 20px auto; border: 1px solid #ccc; border-radius: 8px; }
+    .tabs { display: flex; background-color: #f1f1f1; }
+    .tab { flex: 1; padding: 10px; text-align: center; cursor: pointer; border-right: 1px solid #ccc; }
+    .tab:last-child { border-right: none; }
+    .tab.active { background-color: #fff; font-weight: bold; }
+    .tab-content { display: none; padding: 15px; background-color: #fff; }
+    .tab-content.active { display: block; }
+    .part-entry { display: flex; gap: 10px; margin-bottom: 5px; }
+    input[type="text"] { width: 45%; }
+    button { margin: 5px; }
+  </style>
+</head>
+<body>
+
+<div class="tab-container">
+  <div class="tabs" id="tabs"></div>
+  <div id="contents"></div>
+</div>
+
+<script>
+  // TODO: Replace with your Firebase config
+  const firebaseConfig = {
+  apiKey: "AIzaSyCNZLDo49MQQ3fyTaixYXcjtTpFLWMWcZA",
+  authDomain: "alphapartslist.firebaseapp.com",
+  projectId: "alphapartslist",
+  storageBucket: "alphapartslist.firebasestorage.app",
+  messagingSenderId: "1077784893523",
+  appId: "1:1077784893523:web:6a8b8e162f4d5d5e32cea6",
+  measurementId: "G-T8N60ND7B2"
+};
+
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+  const docRef = db.collection("partsList").doc("sharedData");
+
+  let data = { tabs: [], parts: [] };
+
+  function loadData() {
+    docRef.get().then(doc => {
+      if (doc.exists) {
+        data = doc.data();
+        renderTabs();
+        renderContents();
+        showTab(0);
+      } else {
+        data = {
+          tabs: ["Electrical", "Mechanical", "Tools"],
+          parts: [
+            [ { name: "Wire - 12 AWG", link: "https://example.com/part1" } ],
+            [ { name: "Mounting Bracket", link: "https://example.com/part2" } ],
+            [ { name: "Torque Wrench", link: "https://example.com/part3" } ]
+          ]
+        };
+        saveData();
+        renderTabs();
+        renderContents();
+        showTab(0);
+      }
+    });
+  }
+
+  function saveData() {
+    docRef.set(data);
+  }
+
+  function renderTabs() {
+    const tabsDiv = document.getElementById("tabs");
+    tabsDiv.innerHTML = "";
+    data.tabs.forEach((tabName, i) => {
+      const tab = document.createElement("div");
+      tab.className = "tab" + (i === 0 ? " active" : "");
+      tab.innerHTML = `<input type='text' value='${tabName}' onchange='renameTab(this, ${i})'>`;
+      tab.onclick = () => showTab(i);
+      tabsDiv.appendChild(tab);
+    });
+  }
+
+  function renderContents() {
+    const contentsDiv = document.getElementById("contents");
+    contentsDiv.innerHTML = "";
+    data.parts.forEach((partList, i) => {
+      const content = document.createElement("div");
+      content.className = "tab-content" + (i === 0 ? " active" : "");
+      content.innerHTML = `<h3>${data.tabs[i]} Parts</h3><div id='list${i}'></div><button onclick='addItem(${i})'>Add Part</button>`;
+      contentsDiv.appendChild(content);
+      const listDiv = content.querySelector(`#list${i}`);
+      partList.forEach((part, j) => {
+        const entry = document.createElement("div");
+        entry.className = "part-entry";
+        entry.innerHTML = `
+          <input type='text' value='${part.name}' onchange='updatePartName(${i}, ${j}, this)'>
+          <input type='text' value='${part.link}' onchange='updatePartLink(${i}, ${j}, this)'>
+          <a href='${part.link}' target='_blank'>Visit</a>
+          <button onclick='removeItem(${i}, ${j})'>Delete</button>
+        `;
+        listDiv.appendChild(entry);
+      });
+    });
+  }
+
+  function showTab(index) {
+    document.querySelectorAll(".tab").forEach((tab, i) => tab.classList.toggle("active", i === index));
+    document.querySelectorAll(".tab-content").forEach((content, i) => content.classList.toggle("active", i === index));
+  }
+
+  function renameTab(input, index) {
+    data.tabs[index] = input.value;
+    saveData();
+    renderContents();
+  }
+
+  function addItem(tabIndex) {
+    data.parts[tabIndex].push({ name: "New Part", link: "" });
+    saveData();
+    renderContents();
+    showTab(tabIndex);
+  }
+
+  function removeItem(tabIndex, partIndex) {
+    data.parts[tabIndex].splice(partIndex, 1);
+    saveData();
+    renderContents();
+    showTab(tabIndex);
+  }
+
+  function updatePartName(tabIndex, partIndex, input) {
+    data.parts[tabIndex][partIndex].name = input.value;
+    saveData();
+  }
+
+  function updatePartLink(tabIndex, partIndex, input) {
+    data.parts[tabIndex][partIndex].link = input.value;
+    saveData();
+    renderContents();
+    showTab(tabIndex);
+  }
+
+  window.onload = loadData;
+</script>
+
+</body>
+</html>
