@@ -1,10 +1,10 @@
 import {
-  collection, addDoc, deleteDoc, doc,
-  updateDoc, onSnapshot, getDoc, setDoc
+  collection, doc, getDoc, setDoc,
+  onSnapshot
 } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 import { db } from "./firebase.js";
 
-const EDIT_PASSWORD = "YourStrongPassword123"; // must match Firestore rules
+const EDIT_PASSWORD = "YourStrongPassword123"; // must match firestore.rules
 let editMode = false;
 let activeTab = null;
 
@@ -17,7 +17,6 @@ const unlockBtn = document.getElementById("unlockBtn");
 unlockBtn.addEventListener("click", () => {
   passwordModal.classList.remove("hidden");
 });
-
 window.closePasswordModal = function() {
   passwordModal.classList.add("hidden");
 };
@@ -37,7 +36,7 @@ window.enableEdit = function() {
   }
 };
 
-// 🔄 Real-time listener for tabs collection
+// 🔄 Real-time listener for tabs order
 onSnapshot(collection(db, "tabs"), async () => {
   const orderDoc = await getDoc(doc(db, "meta", "tabsOrder"));
   if (orderDoc.exists()) {
@@ -104,9 +103,7 @@ function renderTabs() {
 
       // Drag
       btn.setAttribute("draggable", "true");
-      btn.ondragstart = (e) => {
-        e.dataTransfer.setData("tabIndex", index);
-      };
+      btn.ondragstart = (e) => e.dataTransfer.setData("tabIndex", index);
       btn.ondragover = (e) => e.preventDefault();
       btn.ondrop = async (e) => {
         const fromIndex = parseInt(e.dataTransfer.getData("tabIndex"));
@@ -151,15 +148,12 @@ function renderItems() {
     row.className = "flex justify-between items-center bg-gray-100 p-2 rounded";
     if (editMode) row.setAttribute("draggable", "true");
 
-    row.ondragstart = (e) => {
-      e.dataTransfer.setData("itemIndex", idx);
-    };
+    row.ondragstart = (e) => e.dataTransfer.setData("itemIndex", idx);
     row.ondragover = (e) => e.preventDefault();
     row.ondrop = async (e) => {
       const fromIndex = parseInt(e.dataTransfer.getData("itemIndex"));
       const toIndex = idx;
       if (fromIndex === toIndex) return;
-
       const newItems = [...tab.items];
       const [moved] = newItems.splice(fromIndex, 1);
       newItems.splice(toIndex, 0, moved);
@@ -189,7 +183,6 @@ function renderItems() {
       const urlSpan = document.createElement("span");
       urlSpan.className = "ml-2 text-gray-500 text-sm cursor-pointer";
       urlSpan.innerText = item.url;
-
       urlSpan.ondblclick = () => {
         makeEditable(urlSpan, item.url, async (newUrl) => {
           tab.items[idx].url = newUrl;
@@ -229,14 +222,15 @@ async function addTab() {
 
   // Immediately editable
   setTimeout(() => {
-    const btn = [...tabsDiv.querySelectorAll("button")].find(b => b.innerText === "New Tab");
-    if (btn) {
-      makeEditable(btn, "New Tab", async (newName) => {
+    const btns = tabsDiv.querySelectorAll("button");
+    const newBtn = [...btns].find(b => b.innerText === "New Tab");
+    if (newBtn) {
+      makeEditable(newBtn, "New Tab", async (newName) => {
         newTab.name = newName;
         await saveTabsOrder();
       });
     }
-  }, 100);
+  }, 150);
 }
 
 async function deleteTab(id) {
@@ -255,26 +249,19 @@ async function addItem(tabId) {
   await saveTabsOrder();
   renderItems();
 
-  // Immediately editable (both fields)
+  // Immediately editable title only
   setTimeout(() => {
     const rows = itemsDiv.querySelectorAll("div");
     const lastRow = rows[rows.length - 1];
     if (!lastRow) return;
-
     const titleSpan = lastRow.querySelector("span.text-blue-600");
-    const urlSpan = lastRow.querySelector("span.text-gray-500");
-
-    if (titleSpan && urlSpan) {
-      makeEditable(titleSpan, "New Item", async (newTitle) => {
+    if (titleSpan) {
+      makeEditable(titleSpan, newItem.title, async (newTitle) => {
         newItem.title = newTitle;
         await saveTabsOrder();
       });
-      makeEditable(urlSpan, "https://example.com", async (newUrl) => {
-        newItem.url = newUrl;
-        await saveTabsOrder();
-      });
     }
-  }, 100);
+  }, 150);
 }
 
 async function deleteItem(tabId, index) {
