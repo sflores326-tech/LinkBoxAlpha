@@ -1,6 +1,6 @@
 import {
   collection, addDoc, deleteDoc, doc,
-  updateDoc, onSnapshot
+  updateDoc, onSnapshot, getDoc, setDoc
 } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 import { db } from "./firebase.js";
 
@@ -37,19 +37,55 @@ window.enableEdit = function() {
   }
 };
 
-// 🔄 Real-time listener
-onSnapshot(collection(db, "tabs"), (snapshot) => {
-  const tabs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  window.tabsData = tabs;
-  if (!activeTab && tabs.length > 0) activeTab = tabs[0].id;
+// 🔄 Real-time listener for tabs collection
+onSnapshot(collection(db, "tabs"), async () => {
+  const orderDoc = await getDoc(doc(db, "meta", "tabsOrder"));
+  if (orderDoc.exists()) {
+    window.tabsData = orderDoc.data().order;
+  } else {
+    window.tabsData = [];
+  }
+
+  if (!activeTab && window.tabsData.length > 0) {
+    activeTab = window.tabsData[0].id;
+  }
   renderTabs();
   renderItems();
 });
 
+// ✏️ Inline editing helper
+function makeEditable(el, initialValue, onSave) {
+  const input = document.createElement("input");
+  input.type = "text";
+  input.value = initialValue;
+  input.className = "border p-1 rounded text-sm flex-1";
+  el.replaceWith(input);
+  input.focus();
+  input.select();
+
+  const save = async () => {
+    const newValue = input.value.trim();
+    if (newValue && newValue !== initialValue) {
+      await onSave(newValue);
+    }
+    input.replaceWith(el);
+    el.innerText = newValue || initialValue;
+  };
+
+  input.addEventListener("blur", save);
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") save();
+    if (e.key === "Escape") {
+      input.replaceWith(el);
+      el.innerText = initialValue;
+    }
+  });
+}
+
 // 🏷️ Render Tabs
 function renderTabs() {
   tabsDiv.innerHTML = "";
-  window.tabsData?.forEach(tab => {
+  window.tabsData?.forEach((tab, index) => {
     const btn = document.createElement("button");
     btn.className = `px-4 py-2 rounded ${
       tab.id === activeTab ? "bg-blue-500 text-white" : "bg-gray-200"
@@ -57,14 +93,30 @@ function renderTabs() {
     btn.innerText = tab.name;
     btn.onclick = () => { activeTab = tab.id; renderTabs(); renderItems(); };
 
-    // ✏️ Allow renaming with double-click
     if (editMode) {
-      btn.ondblclick = async () => {
-        const newName = prompt("Rename Tab:", tab.name);
-        if (newName && newName.trim() !== tab.name) {
-          const tabRef = doc(db, "tabs", tab.id);
-          await updateDoc(tabRef, { name: newName.trim(), editPassword: EDIT_PASSWORD });
-        }
+      // Inline rename
+      btn.ondblclick = () => {
+        makeEditable(btn, tab.name, async (newName) => {
+          tab.name = newName;
+          await saveTabsOrder();
+        });
+      };
+
+      // Drag
+      btn.setAttribute("draggable", "true");
+      btn.ondragstart = (e) => {
+        e.dataTransfer.setData("tabIndex", index);
+      };
+      btn.ondragover = (e) => e.preventDefault();
+      btn.ondrop = async (e) => {
+        const fromIndex = parseInt(e.dataTransfer.getData("tabIndex"));
+        const toIndex = index;
+        if (fromIndex === toIndex) return;
+        const reordered = [...window.tabsData];
+        const [moved] = reordered.splice(fromIndex, 1);
+        reordered.splice(toIndex, 0, moved);
+        window.tabsData = reordered;
+        await saveTabsOrder();
       };
     }
 
@@ -74,7 +126,7 @@ function renderTabs() {
       const del = document.createElement("button");
       del.innerText = "✕";
       del.className = "ml-1 text-red-500";
-      del.onclick = () => deleteTab(tab.id);
+      del.onclick = async () => deleteTab(tab.id);
       tabsDiv.appendChild(del);
     }
   });
@@ -97,51 +149,60 @@ function renderItems() {
   tab.items.forEach((item, idx) => {
     const row = document.createElement("div");
     row.className = "flex justify-between items-center bg-gray-100 p-2 rounded";
+    if (editMode) row.setAttribute("draggable", "true");
 
-    const link = document.createElement("a");
-    link.href = item.url;
-    link.target = "_blank";
-    link.className = "text-blue-600";
-    link.innerText = item.title;
+    row.ondragstart = (e) => {
+      e.dataTransfer.setData("itemIndex", idx);
+    };
+    row.ondragover = (e) => e.preventDefault();
+    row.ondrop = async (e) => {
+      const fromIndex = parseInt(e.dataTransfer.getData("itemIndex"));
+      const toIndex = idx;
+      if (fromIndex === toIndex) return;
 
-    // ✏️ Double-click title to rename
+      const newItems = [...tab.items];
+      const [moved] = newItems.splice(fromIndex, 1);
+      newItems.splice(toIndex, 0, moved);
+      tab.items = newItems;
+      await saveTabsOrder();
+    };
+
+    // Title
+    const titleSpan = document.createElement("span");
+    titleSpan.className = "text-blue-600 cursor-pointer";
+    titleSpan.innerText = item.title;
+    titleSpan.onclick = () => window.open(item.url, "_blank");
+
     if (editMode) {
-      link.ondblclick = async (e) => {
-        e.preventDefault(); // don’t open link
-        const newTitle = prompt("Edit Item Title:", item.title);
-        if (newTitle && newTitle.trim() !== item.title) {
-          const tabRef = doc(db, "tabs", tab.id);
-          const newItems = [...tab.items];
-          newItems[idx].title = newTitle.trim();
-          await updateDoc(tabRef, { items: newItems, editPassword: EDIT_PASSWORD });
-        }
+      titleSpan.ondblclick = () => {
+        makeEditable(titleSpan, item.title, async (newTitle) => {
+          tab.items[idx].title = newTitle;
+          await saveTabsOrder();
+        });
       };
     }
 
-    row.appendChild(link);
+    row.appendChild(titleSpan);
 
     if (editMode) {
-      // ✏️ Double-click URL to edit
-      const urlBtn = document.createElement("button");
-      urlBtn.innerText = "🔗";
-      urlBtn.className = "ml-2 text-sm text-blue-500";
-      urlBtn.title = "Edit URL";
-      urlBtn.onclick = async () => {
-        const newUrl = prompt("Edit Item URL:", item.url);
-        if (newUrl && newUrl.trim() !== item.url) {
-          const tabRef = doc(db, "tabs", tab.id);
-          const newItems = [...tab.items];
-          newItems[idx].url = newUrl.trim();
-          await updateDoc(tabRef, { items: newItems, editPassword: EDIT_PASSWORD });
-        }
-      };
-      row.appendChild(urlBtn);
+      // URL
+      const urlSpan = document.createElement("span");
+      urlSpan.className = "ml-2 text-gray-500 text-sm cursor-pointer";
+      urlSpan.innerText = item.url;
 
-      // ❌ Delete button
+      urlSpan.ondblclick = () => {
+        makeEditable(urlSpan, item.url, async (newUrl) => {
+          tab.items[idx].url = newUrl;
+          await saveTabsOrder();
+        });
+      };
+      row.appendChild(urlSpan);
+
+      // Delete button
       const del = document.createElement("button");
       del.innerText = "✕";
       del.className = "ml-2 text-red-500 text-sm";
-      del.onclick = () => deleteItem(tab.id, idx);
+      del.onclick = async () => deleteItem(tab.id, idx);
       row.appendChild(del);
     }
 
@@ -157,22 +218,76 @@ function renderItems() {
   }
 }
 
-// ➕ Add/Delete
+// ➕ Add/Delete Tabs
 async function addTab() {
-  await addDoc(collection(db, "tabs"), { name: "New Tab", items: [], editPassword: EDIT_PASSWORD });
+  const newTab = { id: crypto.randomUUID(), name: "New Tab", items: [] };
+  window.tabsData.push(newTab);
+  activeTab = newTab.id;
+  await saveTabsOrder();
+  renderTabs();
+  renderItems();
+
+  // Immediately editable
+  setTimeout(() => {
+    const btn = [...tabsDiv.querySelectorAll("button")].find(b => b.innerText === "New Tab");
+    if (btn) {
+      makeEditable(btn, "New Tab", async (newName) => {
+        newTab.name = newName;
+        await saveTabsOrder();
+      });
+    }
+  }, 100);
 }
+
 async function deleteTab(id) {
-  await deleteDoc(doc(db, "tabs", id));
+  window.tabsData = window.tabsData.filter(t => t.id !== id);
+  if (activeTab === id && window.tabsData.length > 0) activeTab = window.tabsData[0].id;
+  await saveTabsOrder();
+  renderTabs();
+  renderItems();
 }
+
+// ➕ Add/Delete Items
 async function addItem(tabId) {
   const tab = window.tabsData.find(t => t.id === tabId);
-  const tabRef = doc(db, "tabs", tabId);
-  await updateDoc(tabRef, { items: [...tab.items, { title: "New Item", url: "https://example.com" }], editPassword: EDIT_PASSWORD });
+  const newItem = { title: "New Item", url: "https://example.com" };
+  tab.items.push(newItem);
+  await saveTabsOrder();
+  renderItems();
+
+  // Immediately editable (both fields)
+  setTimeout(() => {
+    const rows = itemsDiv.querySelectorAll("div");
+    const lastRow = rows[rows.length - 1];
+    if (!lastRow) return;
+
+    const titleSpan = lastRow.querySelector("span.text-blue-600");
+    const urlSpan = lastRow.querySelector("span.text-gray-500");
+
+    if (titleSpan && urlSpan) {
+      makeEditable(titleSpan, "New Item", async (newTitle) => {
+        newItem.title = newTitle;
+        await saveTabsOrder();
+      });
+      makeEditable(urlSpan, "https://example.com", async (newUrl) => {
+        newItem.url = newUrl;
+        await saveTabsOrder();
+      });
+    }
+  }, 100);
 }
+
 async function deleteItem(tabId, index) {
   const tab = window.tabsData.find(t => t.id === tabId);
-  const newItems = [...tab.items];
-  newItems.splice(index, 1);
-  const tabRef = doc(db, "tabs", tabId);
-  await updateDoc(tabRef, { items: newItems, editPassword: EDIT_PASSWORD });
+  tab.items.splice(index, 1);
+  await saveTabsOrder();
+  renderItems();
+}
+
+// 💾 Save tabs order + contents
+async function saveTabsOrder() {
+  await setDoc(doc(db, "meta", "tabsOrder"), {
+    order: window.tabsData,
+    editPassword: EDIT_PASSWORD
+  });
 }
